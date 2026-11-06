@@ -36,7 +36,8 @@ type LeadStatus =
   | "em_contato"
   | "proposta"
   | "convertido"
-  | "arquivado";
+  | "arquivado"
+  | "sem_sucesso";
 
 type CrmLead = {
   id: string;
@@ -57,6 +58,7 @@ const statusLabels: Record<LeadStatus, string> = {
   proposta: "Proposta",
   convertido: "Convertido",
   arquivado: "Arquivado",
+  sem_sucesso: "Contato sem sucesso",
 };
 
 const objectiveLabels = {
@@ -71,6 +73,13 @@ const money = (value: number) =>
     currency: "BRL",
     maximumFractionDigits: 0,
   }).format(value);
+
+function getWhatsAppUrl(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) return "";
+
+  return `https://wa.me/${digits.startsWith("55") ? digits : `55${digits}`}`;
+}
 
 function getFirestoreErrorMessage(error: unknown, action: string) {
   if (error instanceof FirebaseError && error.code === "permission-denied") {
@@ -123,6 +132,9 @@ export default function CrmPage() {
   const [loginError, setLoginError] = useState("");
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [leads, setLeads] = useState<CrmLead[]>([]);
+  const [pendingStatuses, setPendingStatuses] = useState<
+    Partial<Record<string, LeadStatus>>
+  >({});
   const [search, setSearch] = useState("");
   const [loadingLeads, setLoadingLeads] = useState(false);
   const [error, setError] = useState("");
@@ -195,6 +207,7 @@ export default function CrmPage() {
           );
       } else {
         setLeads([]);
+        setPendingStatuses({});
         setLoadingLeads(false);
         setError("");
         setNewLeadNoticeCount(0);
@@ -209,18 +222,41 @@ export default function CrmPage() {
   }, [configError, loadLeads]);
 
   const filteredLeads = useMemo(() => {
-    const searchTerm = search.trim().toLowerCase();
-    if (!searchTerm) return leads;
+    const sortedLeads = [...leads].sort((a, b) => {
+      const failedContactOrder =
+        Number(a.status === "sem_sucesso") -
+        Number(b.status === "sem_sucesso");
+      if (failedContactOrder !== 0) return failedContactOrder;
 
-    return leads.filter((lead) =>
+      return (
+        (b.createdAt ? Date.parse(b.createdAt) : 0) -
+        (a.createdAt ? Date.parse(a.createdAt) : 0)
+      );
+    });
+    const searchTerm = search.trim().toLowerCase();
+    if (!searchTerm) return sortedLeads;
+
+    return sortedLeads.filter((lead) =>
       [lead.name, lead.email, lead.phone].some((value) =>
         value.toLowerCase().includes(searchTerm),
       ),
     );
   }, [leads, search]);
 
+  const selectLeadStatus = (lead: CrmLead, status: LeadStatus) => {
+    setPendingStatuses((currentStatuses) => {
+      const nextStatuses = { ...currentStatuses };
+      if (status === lead.status) {
+        delete nextStatuses[lead.id];
+      } else {
+        nextStatuses[lead.id] = status;
+      }
+      return nextStatuses;
+    });
+  };
+
   const updateStatus = async (lead: CrmLead, status: LeadStatus) => {
-    if (!user) return;
+    if (!user || status === lead.status) return;
     setBusyLeadId(lead.id);
     setError("");
 
@@ -235,6 +271,11 @@ export default function CrmPage() {
           currentLead.id === lead.id ? { ...currentLead, status } : currentLead,
         ),
       );
+      setPendingStatuses((currentStatuses) => {
+        const nextStatuses = { ...currentStatuses };
+        delete nextStatuses[lead.id];
+        return nextStatuses;
+      });
     } catch (updateError) {
       setError(getFirestoreErrorMessage(updateError, "atualizar a etapa"));
     } finally {
@@ -475,9 +516,19 @@ export default function CrmPage() {
                       <strong>{lead.email}</strong>
                     </a>
                     <a href={`tel:${lead.phone}`}>
-                      <span>WhatsApp / telefone</span>
+                      <span>Telefone</span>
                       <strong>{lead.phone}</strong>
                     </a>
+                    {lead.phone && (
+                      <a
+                        className={styles.whatsappLink}
+                        href={getWhatsAppUrl(lead.phone)}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        Abrir no WhatsApp
+                      </a>
+                    )}
                   </section>
 
                   <section className={styles.profile}>
@@ -492,22 +543,44 @@ export default function CrmPage() {
 
                 <footer className={styles.leadFooter}>
                   <span className={styles.statusLabel}>Etapa do atendimento</span>
-                  <label className={styles.statusControl}>
-                    <span className={styles.visuallyHidden}>Etapa de {lead.name}</span>
-                    <select
-                      disabled={busyLeadId === lead.id}
-                      onChange={(event) =>
-                        void updateStatus(lead, event.target.value as LeadStatus)
+                  <div className={styles.statusActions}>
+                    <label className={styles.statusControl}>
+                      <span className={styles.visuallyHidden}>
+                        Etapa de {lead.name}
+                      </span>
+                      <select
+                        disabled={busyLeadId === lead.id}
+                        onChange={(event) =>
+                          selectLeadStatus(
+                            lead,
+                            event.target.value as LeadStatus,
+                          )
+                        }
+                        value={pendingStatuses[lead.id] ?? lead.status}
+                      >
+                        {Object.entries(statusLabels).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      className={styles.saveStatus}
+                      disabled={
+                        busyLeadId === lead.id ||
+                        !pendingStatuses[lead.id] ||
+                        pendingStatuses[lead.id] === lead.status
                       }
-                      value={lead.status}
+                      onClick={() => {
+                        const status = pendingStatuses[lead.id];
+                        if (status) void updateStatus(lead, status);
+                      }}
+                      type="button"
                     >
-                      {Object.entries(statusLabels).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      {busyLeadId === lead.id ? "Salvando..." : "Salvar"}
+                    </button>
+                  </div>
                 </footer>
               </article>
             ))}

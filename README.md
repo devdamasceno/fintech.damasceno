@@ -11,7 +11,7 @@ O Firebase Web SDK conecta o navegador diretamente ao Authentication e ao Firest
 3. O acesso do CRM está autorizado para `teste@damasceno.com`. Para incluir/remover membros, atualize `isCrmUser()` em `firestore.rules` e publique as regras novamente.
 4. As configurações públicas do app Web já estão no `.env` local (ignorado pelo Git). Reinicie `yarn dev` depois de alterar variáveis de ambiente.
 
-O CRM pesquisa os 200 cadastros mais recentes, atualiza a etapa do atendimento e mostra um aviso em tempo real de novos leads enquanto estiver aberto e autenticado. O resumo de perfil usa apenas a modalidade e os valores informados no formulário; não faz buscas externas nem estima crédito ou capacidade financeira. Analytics não está habilitado.
+O CRM pesquisa os 200 cadastros mais recentes, atualiza a etapa do atendimento ao clicar em “Salvar” e mostra um aviso em tempo real de novos leads enquanto estiver aberto e autenticado. Leads com status “Contato sem sucesso” aparecem no fim da lista; os demais permanecem ordenados do mais novo ao mais antigo. As regras do Firestore devem permitir o novo valor de status `sem_sucesso`. O resumo de perfil usa apenas a modalidade e os valores informados no formulário; não faz buscas externas nem estima crédito ou capacidade financeira. Analytics não está habilitado.
 
 ## Desenvolvimento
 

@@ -55,6 +55,7 @@
 
 .logout,
 .tools button,
+.saveStatus,
 .loginCard form button {
   border: 0;
   border-radius: 12px;
@@ -179,6 +180,7 @@
 
 .tools button:disabled,
 .statusControl select:disabled,
+.saveStatus:disabled,
 .loginCard form button:disabled {
   cursor: wait;
   opacity: 0.6;
@@ -303,6 +305,23 @@
   white-space: nowrap;
 }
 
+.contactDetails .whatsappLink {
+  display: inline-flex;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 9px;
+  background: #128c7e;
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.contactDetails .whatsappLink:hover {
+  background: #0e766b;
+  color: white;
+  text-decoration: none;
+}
+
 .profile p {
   margin: 0 0 7px;
   color: var(--ink);
@@ -332,8 +351,16 @@
   font-weight: 700;
 }
 
+.statusActions {
+  display: flex;
+  align-items: center;
+  width: min(340px, 100%);
+  gap: 8px;
+}
+
 .statusControl {
   display: block;
+  flex: 1;
   min-width: 165px;
 }
 
@@ -342,6 +369,15 @@
   min-height: 38px;
   padding: 0 10px;
   font-weight: 700;
+}
+
+.saveStatus {
+  min-height: 38px;
+  padding: 0 15px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .visuallyHidden {
@@ -492,6 +528,10 @@
   }
 
   .statusControl {
+    min-width: 0;
+  }
+
+  .statusActions {
     width: 100%;
   }
 
