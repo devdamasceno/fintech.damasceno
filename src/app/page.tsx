@@ -2,8 +2,9 @@
 
 import type { FormEvent, ReactNode } from "react";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Brand from "@/components/Brand";
+import LeadChat from "@/components/LeadChat";
 import { saveLead } from "@/lib/firebase-client";
 import styles from "./page.module.css";
 
@@ -162,6 +163,25 @@ const faqs = [
       "Sim. Você pode antecipar parcelas ou quitar o saldo de acordo com as regras do grupo escolhido.",
   },
 ];
+
+type CookieChoice = "accepted" | "rejected";
+const cookieChoiceKey = "damasceno-cookie-choice";
+const cookieChoiceEvent = "damasceno-cookie-choice-change";
+
+function getCookieChoice(): CookieChoice | null {
+  const choice = window.localStorage.getItem(cookieChoiceKey);
+  return choice === "accepted" || choice === "rejected" ? choice : null;
+}
+
+function subscribeToCookieChoice(onChange: () => void) {
+  const handleChange = () => onChange();
+  window.addEventListener("storage", handleChange);
+  window.addEventListener(cookieChoiceEvent, handleChange);
+  return () => {
+    window.removeEventListener("storage", handleChange);
+    window.removeEventListener(cookieChoiceEvent, handleChange);
+  };
+}
 
 function Simulator() {
   const [plan, setPlan] = useState<PlanKey>("home");
@@ -429,6 +449,16 @@ export default function HomePage() {
   const [contactError, setContactError] = useState("");
   const [contactSent, setContactSent] = useState(false);
   const [contactSubmitting, setContactSubmitting] = useState(false);
+  const cookieChoice = useSyncExternalStore(
+    subscribeToCookieChoice,
+    getCookieChoice,
+    () => null,
+  );
+
+  const saveCookieChoice = (choice: CookieChoice) => {
+    window.localStorage.setItem(cookieChoiceKey, choice);
+    window.dispatchEvent(new Event(cookieChoiceEvent));
+  };
 
   const submitContact = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -755,6 +785,38 @@ export default function HomePage() {
       >
         <Icon name="whatsapp" size={25} />
       </a>
+      <LeadChat cookieBannerVisible={!cookieChoice} />
+      {!cookieChoice && (
+        <aside
+          aria-label="Preferências de cookies"
+          className={styles.cookieBanner}
+          role="dialog"
+        >
+          <div>
+            <strong>Preferências de cookies</strong>
+            <p>
+              Salvamos sua escolha neste dispositivo. Não usamos cookies de
+              publicidade ou rastreamento.
+            </p>
+          </div>
+          <div className={styles.cookieActions}>
+            <button
+              className={styles.cookieReject}
+              onClick={() => saveCookieChoice("rejected")}
+              type="button"
+            >
+              Recusar
+            </button>
+            <button
+              className={styles.cookieAccept}
+              onClick={() => saveCookieChoice("accepted")}
+              type="button"
+            >
+              Aceitar
+            </button>
+          </div>
+        </aside>
+      )}
     </main>
   );
 }

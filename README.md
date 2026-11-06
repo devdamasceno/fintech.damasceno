@@ -13,6 +13,8 @@ O Firebase Web SDK conecta o navegador diretamente ao Authentication e ao Firest
 
 O CRM pesquisa os 200 cadastros mais recentes, atualiza a etapa do atendimento ao clicar em “Salvar” e mostra um aviso em tempo real de novos leads enquanto estiver aberto e autenticado. Leads com status “Contato sem sucesso” aparecem no fim da lista; os demais permanecem ordenados do mais novo ao mais antigo. As regras do Firestore devem permitir o novo valor de status `sem_sucesso`. O resumo de perfil usa apenas a modalidade e os valores informados no formulário; não faz buscas externas nem estima crédito ou capacidade financeira. Analytics não está habilitado.
 
+O chat de atendimento é executado no próprio site, sem fornecedor externo: abre com uma pergunta inicial e, após o visitante demonstrar interesse e consentir com o contato, envia nome, WhatsApp e e-mail ao Firestore para aparecer no CRM com origem “Chatbot”. Se as regras do Firestore validarem os valores de `source`, inclua também `chatbot` na lista permitida. O aviso de cookies permite aceitar ou recusar e salva a escolha no armazenamento local do navegador; o consentimento para contato é solicitado separadamente no chat.
+
 ## Desenvolvimento
 
 ```bash

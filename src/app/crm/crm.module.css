@@ -305,20 +305,35 @@
   white-space: nowrap;
 }
 
-.contactDetails .whatsappLink {
-  display: inline-flex;
-  width: fit-content;
-  padding: 8px 12px;
-  border-radius: 9px;
-  background: #128c7e;
-  color: white;
-  font-size: 11px;
-  font-weight: 800;
+.phoneRow {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
 }
 
-.contactDetails .whatsappLink:hover {
-  background: #0e766b;
+.contactDetails .phoneNumber {
+  flex: 1;
+}
+
+.contactDetails .whatsappIconLink {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: #128c7e;
   color: white;
+}
+
+.whatsappIconLink svg {
+  width: 16px;
+  height: 16px;
+}
+
+.contactDetails .whatsappIconLink:hover {
+  background: #0e766b;
   text-decoration: none;
 }
 

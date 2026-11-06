@@ -18,7 +18,7 @@ export type NewLead = {
   objective: "imovel" | "veiculos" | "servicos" | null;
   amountType: "credit" | "installment" | null;
   amount: number | null;
-  source: "simulador" | "contato";
+  source: "simulador" | "contato" | "chatbot";
   consent: true;
 };
 

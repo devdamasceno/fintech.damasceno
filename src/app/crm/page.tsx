@@ -47,7 +47,7 @@ type CrmLead = {
   objective: "imovel" | "veiculos" | "servicos" | null;
   amountType: "credit" | "installment" | null;
   amount: number | null;
-  source: "simulador" | "contato";
+  source: "simulador" | "contato" | "chatbot";
   status: LeadStatus;
   createdAt: string | null;
 };
@@ -495,7 +495,11 @@ export default function CrmPage() {
                   <div className={styles.leadHeading}>
                     <h3>{lead.name}</h3>
                     <span className={styles.source}>
-                      {lead.source === "simulador" ? "Simulação" : "Contato"}
+                      {lead.source === "simulador"
+                        ? "Simulação"
+                        : lead.source === "chatbot"
+                          ? "Chatbot"
+                          : "Contato"}
                     </span>
                   </div>
                   <time className={styles.leadDate}>
@@ -515,20 +519,43 @@ export default function CrmPage() {
                       <span>E-mail</span>
                       <strong>{lead.email}</strong>
                     </a>
-                    <a href={`tel:${lead.phone}`}>
-                      <span>Telefone</span>
-                      <strong>{lead.phone}</strong>
-                    </a>
-                    {lead.phone && (
+                    <div className={styles.phoneRow}>
                       <a
-                        className={styles.whatsappLink}
-                        href={getWhatsAppUrl(lead.phone)}
-                        rel="noopener noreferrer"
-                        target="_blank"
+                        className={styles.phoneNumber}
+                        href={`tel:${lead.phone}`}
                       >
-                        Abrir no WhatsApp
+                        <span>Telefone</span>
+                        <strong>{lead.phone}</strong>
                       </a>
-                    )}
+                      {lead.phone && (
+                        <a
+                          aria-label={`Abrir conversa no WhatsApp com ${lead.name}`}
+                          className={styles.whatsappIconLink}
+                          href={getWhatsAppUrl(lead.phone)}
+                          rel="noopener noreferrer"
+                          target="_blank"
+                          title="Abrir no WhatsApp"
+                        >
+                          <svg
+                            aria-hidden="true"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              d="M20 11.7a8.2 8.2 0 0 1-12.1 7.2L4 20l1.1-3.8A8.2 8.2 0 1 1 20 11.7Z"
+                              stroke="currentColor"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="1.8"
+                            />
+                            <path
+                              d="M9 8.5c.2-.5.5-.5.8-.5h.5c.2 0 .4.1.5.4l.7 1.6c.1.2.1.4-.1.6l-.5.6c-.2.2-.2.4 0 .6.5.8 1.2 1.4 2 1.8.2.1.4.1.6-.1l.7-.8c.2-.2.4-.2.6-.1l1.5.7c.3.1.4.3.4.5 0 .4-.2 1-.6 1.3-.4.4-1 .6-1.6.5-1-.1-2.2-.7-3.4-1.8-1.1-1-1.9-2.3-2.1-3.3-.2-.7 0-1.5.4-2Z"
+                              fill="currentColor"
+                            />
+                          </svg>
+                        </a>
+                      )}
+                    </div>
                   </section>
 
                   <section className={styles.profile}>
