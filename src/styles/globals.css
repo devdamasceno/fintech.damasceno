@@ -1,0 +1,52 @@
+:root {
+  --navy: #171a4b;
+  --navy-dark: #0e1034;
+  --coral: #ff5c45;
+  --sky: #c8e6ff;
+  --pale: #eaf4ff;
+  --ink: #191a3b;
+  --muted: #687078;
+  --line: #dce0e5;
+  --paper: #f7f5ef;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-manrope), sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--sky);
+  color: var(--navy);
+}
