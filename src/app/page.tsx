@@ -3,6 +3,8 @@
 import type { FormEvent, ReactNode } from "react";
 import Image from "next/image";
 import { useState } from "react";
+import Brand from "@/components/Brand";
+import { saveLead } from "@/lib/firebase-client";
 import styles from "./page.module.css";
 
 const heroImage =
@@ -71,27 +73,6 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   );
 }
 
-function Brand() {
-  return (
-    <span className={styles.brand}>
-      <span className={styles.brandMark} aria-hidden="true">
-        <svg fill="none" viewBox="0 0 40 40">
-          <path
-            d="M11 8h8.5C27.5 8 33 12.8 33 20s-5.5 12-13.5 12H11V8Z"
-            stroke="currentColor"
-            strokeWidth="3.2"
-          />
-          <path d="M17 14v12h3c4.3 0 7-2.2 7-6s-2.7-6-7-6h-3Z" fill="currentColor" />
-        </svg>
-      </span>
-      <span>
-        <strong>Damasceno</strong>
-        <small>Consórcios</small>
-      </span>
-    </span>
-  );
-}
-
 const plans = {
   home: {
     label: "Imóveis",
@@ -104,7 +85,7 @@ const plans = {
     installmentMax: 8629,
     installmentInitial: 1500,
     installmentStep: 50,
-    description: "Casa, apartamento, terreno, construção ou reforma.",
+    description: " Casa, apartamento, terreno, construção ou reforma.",
   },
   car: {
     label: "Veículos",
@@ -117,7 +98,7 @@ const plans = {
     installmentMax: 2705,
     installmentInitial: 900,
     installmentStep: 50,
-    description: "Carro, caminhão, embarcação, aeronave ou equipamento.",
+    description: " Carro, caminhão, embarcação, aeronave ou equipamento.",
   },
   service: {
     label: "Serviços",
@@ -130,7 +111,7 @@ const plans = {
     installmentMax: 5913,
     installmentInitial: 600,
     installmentStep: 50,
-    description: "Viagens, estudos, casamento ou procedimentos.",
+    description: " Viagens, estudos, casamento ou procedimentos.",
   },
 };
 
@@ -143,6 +124,21 @@ const money = (value: number) =>
     currency: "BRL",
     maximumFractionDigits: 0,
   }).format(value);
+
+function formatBrazilianPhone(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (!digits) return "";
+  if (digits.length <= 2) return `(${digits}`;
+
+  const areaCode = digits.slice(0, 2);
+  const subscriber = digits.slice(2);
+  if (subscriber.length <= 4) return `(${areaCode}) ${subscriber}`;
+  if (digits.length <= 10) {
+    return `(${areaCode}) ${subscriber.slice(0, 4)}-${subscriber.slice(4)}`;
+  }
+
+  return `(${areaCode}) ${subscriber.slice(0, 5)}-${subscriber.slice(5)}`;
+}
 
 const faqs = [
   {
@@ -173,7 +169,20 @@ function Simulator() {
   const [value, setValue] = useState(plans.home.initial);
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const active = plans[plan];
+  const whatsappMessage = [
+    "Olá! Acabei de enviar uma simulação pelo site e gostaria de conversar agora.",
+    `Nome: ${name.trim()}`,
+    `WhatsApp: ${phone}`,
+    `E-mail: ${email.trim()}`,
+    `Interesse: ${active.label}`,
+    `${mode === "credit" ? "Crédito" : "Parcela mensal"}: ${money(value)}${mode === "installment" ? "/mês" : ""}`,
+  ].join("\n");
+  const simulatorWhatsappUrl = `https://wa.me/5532988039801?text=${encodeURIComponent(whatsappMessage)}`;
 
   const selectPlan = (key: PlanKey) => {
     setPlan(key);
@@ -185,9 +194,34 @@ function Simulator() {
     setValue(next === "credit" ? active.initial : active.installmentInitial);
   };
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setStep(4);
+    setSubmitError("");
+    setIsSubmitting(true);
+
+    try {
+      await saveLead({
+        name,
+        phone,
+        email,
+        objective:
+          plan === "home" ? "imovel" : plan === "car" ? "veiculos" : "servicos",
+        amountType: mode,
+        amount: value,
+        source: "simulador",
+        consent: true,
+      });
+
+      setStep(4);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível enviar seu cadastro. Tente novamente.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -312,27 +346,44 @@ function Simulator() {
               onChange={(event) => setName(event.target.value)}
               placeholder="Seu nome"
               required
+              maxLength={120}
               value={name}
             />
           </label>
           <label>
             WhatsApp
-            <input inputMode="tel" placeholder="(00) 00000-0000" required />
+            <input
+              inputMode="tel"
+              maxLength={15}
+              onChange={(event) => setPhone(formatBrazilianPhone(event.target.value))}
+              placeholder="(00) 00000-0000"
+              required
+              value={phone}
+            />
           </label>
           <label>
             E-mail
-            <input inputMode="email" placeholder="voce@email.com" required type="email" />
+            <input
+              autoComplete="email"
+              maxLength={254}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="voce@email.com"
+              required
+              type="email"
+              value={email}
+            />
           </label>
           <label className={styles.consent}>
             <input required type="checkbox" />
-            Li e concordo com os Termos de Uso e com o contato da equipe.
+            Concordo que a equipe Damasceno use estes dados para entrar em contato e dar andamento à minha simulação.
           </label>
+          {submitError && <p className={styles.formError} role="alert">{submitError}</p>}
           <div className={styles.buttonRow}>
             <button className={styles.backButton} onClick={() => setStep(2)} type="button">
               Voltar
             </button>
-            <button className={styles.submitButton} type="submit">
-              Simular <Icon name="arrow" size={18} />
+            <button className={styles.submitButton} disabled={isSubmitting} type="submit">
+              {isSubmitting ? "Enviando..." : "Simular"} <Icon name="arrow" size={18} />
             </button>
           </div>
         </form>
@@ -345,14 +396,24 @@ function Simulator() {
           </span>
           <h3>{name}, seu plano está pronto para análise.</h3>
           <p>
-            Esta é uma estimativa inicial de {active.label.toLowerCase()} com{" "}
+            Recebemos sua simulação de {active.label.toLowerCase()} com{" "}
             {mode === "credit" ? "crédito de " : "parcela de "}
-            <strong>{money(value)}</strong>. Nenhuma solicitação foi enviada.
+            <strong>{money(value)}</strong>. Nossa equipe entrará em contato com
+            você o mais rápido possível.
           </p>
           <div className={styles.nextStep}>
             <span>Importante</span>
             <p>Valores, taxas e prazos dependem do grupo e devem ser confirmados antes da contratação.</p>
           </div>
+          <a
+            className={styles.resultWhatsapp}
+            href={simulatorWhatsappUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            <Icon name="whatsapp" size={18} />
+            Quero falar agora pelo WhatsApp
+          </a>
           <button onClick={() => setStep(1)} type="button">
             Refazer simulação
           </button>
@@ -365,7 +426,42 @@ function Simulator() {
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
-  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [contactError, setContactError] = useState("");
+  const [contactSent, setContactSent] = useState(false);
+  const [contactSubmitting, setContactSubmitting] = useState(false);
+
+  const submitContact = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setContactError("");
+    setContactSent(false);
+    setContactSubmitting(true);
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    try {
+      await saveLead({
+        name: String(formData.get("name") ?? ""),
+        phone: String(formData.get("phone") ?? ""),
+        email: String(formData.get("email") ?? ""),
+        objective: null,
+        amountType: null,
+        amount: null,
+        source: "contato",
+        consent: true,
+      });
+
+      setContactSent(true);
+      form.reset();
+    } catch (error) {
+      setContactError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível enviar seu cadastro. Tente novamente.",
+      );
+    } finally {
+      setContactSubmitting(false);
+    }
+  };
 
   const nav = [
     ["Modalidades", "#modalidades"],
@@ -595,34 +691,45 @@ export default function HomePage() {
             <h2>Vamos tirar seu sonho do papel?</h2>
             <p>Preencha seus dados para receber uma simulação personalizada.</p>
           </div>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              setSubmitAttempted(true);
-            }}
-          >
+          <form onSubmit={submitContact}>
             <h3>Receba uma simulação completa</h3>
             <label>
               Nome completo
-              <input placeholder="Como podemos chamar você?" required />
+              <input maxLength={120} name="name" placeholder="Como podemos chamar você?" required />
             </label>
             <div className={styles.formRow}>
               <label>
                 WhatsApp
-                <input placeholder="(00) 00000-0000" required />
+                <input
+                  inputMode="tel"
+                  maxLength={15}
+                  name="phone"
+                  onChange={(event) => {
+                    event.currentTarget.value = formatBrazilianPhone(event.currentTarget.value);
+                  }}
+                  placeholder="(00) 00000-0000"
+                  required
+                />
               </label>
               <label>
                 E-mail
-                <input placeholder="voce@email.com" required type="email" />
+                <input maxLength={254} name="email" placeholder="voce@email.com" required type="email" />
               </label>
             </div>
-            {submitAttempted && (
-              <p className={styles.formError} role="status">
-                O formulário ainda não está conectado a um canal de recebimento. Seus dados não foram enviados.
+            <label className={styles.consent}>
+              <input name="consent" required type="checkbox" />
+              Concordo que a equipe Damasceno use estes dados para entrar em contato comigo.
+            </label>
+            {contactError && (
+              <p className={styles.formError} role="alert">{contactError}</p>
+            )}
+            {contactSent && (
+              <p className={styles.formSuccess} role="status">
+                Cadastro recebido. A equipe Damasceno entrará em contato.
               </p>
             )}
-            <button className={styles.submitButton} type="submit">
-              Quero falar com um especialista <Icon name="arrow" size={18} />
+            <button className={styles.submitButton} disabled={contactSubmitting} type="submit">
+              {contactSubmitting ? "Enviando..." : "Quero falar com um especialista"} <Icon name="arrow" size={18} />
             </button>
           </form>
         </div>
@@ -635,6 +742,7 @@ export default function HomePage() {
             <p>Consultoria especializada em soluções de consórcio Ademicon.</p>
           </div>
           <p>© 2026 Damasceno Consórcios. Todos os direitos reservados.</p>
+          <a className={styles.teamLink} href="/crm">Acesso da equipe</a>
         </div>
       </footer>
 
