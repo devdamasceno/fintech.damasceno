@@ -121,6 +121,7 @@ export default function CrmPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [leads, setLeads] = useState<CrmLead[]>([]);
   const [search, setSearch] = useState("");
   const [loadingLeads, setLoadingLeads] = useState(false);
@@ -243,13 +244,20 @@ export default function CrmPage() {
 
   const submitLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (configError) return;
+    if (configError || isSigningIn) return;
     setLoginError("");
 
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail || normalizedEmail.length > 254 || !password) {
+      setLoginError("Informe um e-mail válido e a senha.");
+      return;
+    }
+
+    setIsSigningIn(true);
     try {
       await signInWithEmailAndPassword(
         getFirebaseAuth(),
-        email.trim(),
+        normalizedEmail,
         password,
       );
       setPassword("");
@@ -257,6 +265,8 @@ export default function CrmPage() {
       setLoginError(
         "Não foi possível entrar. Verifique o e-mail e a senha cadastrados no Firebase.",
       );
+    } finally {
+      setIsSigningIn(false);
     }
   };
 
@@ -296,9 +306,15 @@ export default function CrmPage() {
             <label>
               E-mail
               <input
+                autoCapitalize="none"
                 autoComplete="username"
-                onChange={(event) => setEmail(event.target.value)}
+                maxLength={254}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setLoginError("");
+                }}
                 required
+                spellCheck={false}
                 type="email"
                 value={email}
               />
@@ -307,14 +323,20 @@ export default function CrmPage() {
               Senha
               <input
                 autoComplete="current-password"
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setLoginError("");
+                }}
                 required
                 type="password"
                 value={password}
               />
             </label>
-            <button disabled={Boolean(configError)} type="submit">
-              Entrar no CRM
+            <button
+              disabled={Boolean(configError) || isSigningIn}
+              type="submit"
+            >
+              {isSigningIn ? "Entrando..." : "Entrar no CRM"}
             </button>
           </form>
         </section>
